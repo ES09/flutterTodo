@@ -34,7 +34,8 @@ class DatabaseHelper {
         title String,
         memo String,
         color INTEGER,
-        category String
+        category String,
+        done INTEGER DEFAULT 0
       )
     ''');
   }
@@ -53,6 +54,7 @@ class DatabaseHelper {
         "memo": todo.memo,
         "category": todo.category,
         "color": todo.color,
+        "done": todo.done,
         "date": todo.date,
       };
       return await db.insert(todoTable, row);
@@ -62,6 +64,7 @@ class DatabaseHelper {
         "memo": todo.memo,
         "category": todo.category,
         "color": todo.color,
+        "done": todo.done,
         "date": todo.date,
       };
       return await db.update(todoTable, row, where: "id = ?", whereArgs: [todo.id]);
@@ -82,6 +85,7 @@ class DatabaseHelper {
         memo: q["memo"],
         category: q["category"],
         color: q["color"],
+        done: q["done"],
         date: q["date"],
       ));
     }
@@ -103,6 +107,7 @@ class DatabaseHelper {
         memo: q["memo"],
         category: q["category"],
         color: q["color"],
+        done: q["done"],
         date: q["date"],
       ));
     }

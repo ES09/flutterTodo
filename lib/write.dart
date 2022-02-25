@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:project/data/database.dart';
 
 import 'data/todo.dart';
 
@@ -18,6 +19,8 @@ class _TodoWritePageState extends State<TodoWritePage> {
 
   TextEditingController titleController = TextEditingController();
   TextEditingController memoController = TextEditingController();
+
+  final dbHelper = DatabaseHelper.instance;
 
   int colorIndex = 0;
   int categoryIndex = 0;
@@ -38,11 +41,11 @@ class _TodoWritePageState extends State<TodoWritePage> {
       appBar: AppBar(
         actions: [
           TextButton(
-              onPressed: (){
+              onPressed: () async {
                 //내용 저장
                 widget.todo.title = titleController.text;
                 widget.todo.memo = memoController.text;
-
+                await dbHelper.modifyTodo(widget.todo);
                 Navigator.of(context).pop(widget.todo);
               },
               child: Text("Save", style: TextStyle(color: Colors.white),)

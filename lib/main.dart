@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project/write.dart';
 
+import 'data/database.dart';
 import 'data/todo.dart';
 import 'data/util.dart';
 
@@ -54,27 +55,26 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<Todo> todos = [
-    Todo(
-      title: "강의 듣기",
-      memo: "앱 flutter",
-      color: Colors.redAccent.value,
-      done: 0,
-      category: "study",
-      date: 20220224
-    ),
-    Todo(
-      title: "강의 듣기 2",
-      memo: "웹 node",
-      color: Colors.blue.value,
-      done: 1,
-      category: "study",
-      date: 20220224
-    )
-  ];
+
+  final dbHelper = DatabaseHelper.instance;
+  int selectIndex = 0;
+
+  List<Todo> todos = [];
+  List<Todo> allTodos = [];
+
+  void getTodayTodo() async {
+    todos = await dbHelper.getTodoByDate(Utils.getFormatTime(DateTime.now()));
+    setState(() {});
+  }
+
+  void getAllTodo() async {
+    allTodos = await dbHelper.getAllTodo();
+    setState(() {});
+  }
 
   @override
   void initState() {
+    getTodayTodo();
     super.initState();
   }
 
@@ -98,99 +98,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 date: Utils.getFormatTime(DateTime.now())
               ))
           ));
-
-          setState(() {
-            todos.add(todo);
-          });
+          getTodayTodo();
         },
       ),
-      body: ListView.builder(
-          itemBuilder: (ctx, idx) {
-            if (idx == 0) {
-              return Container(
-                child: Text("오늘하루", style: TextStyle(fontWeight: FontWeight.bold, fontSize:  20)),
-                margin: EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 20,
-                ),
-              );
-            } else if (idx == 1) {
-              List<Todo> undoneList = todos.where((t){
-                return t.done == 0;
-              }).toList();
-
-              return Container(
-                child: Column(
-                  children: List.generate(undoneList.length, (_idx) {
-                    Todo t = undoneList[_idx];
-
-                    return InkWell(child : TodoCardWidget(t:t),
-                      onTap: (){
-                        setState(() {
-                          if(t.done == 0) {
-                            t.done = 1;
-                          } else {
-                            t.done = 0;
-                          }
-                        });
-                      },
-                      onLongPress: () async {
-                        Todo todo = await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (ctx) => TodoWritePage(todo: t)
-                        ));
-                        setState(() {
-
-                        });
-                      },
-                    );
-                  }),
-                ),
-              );
-            } else if (idx == 2) {
-              return Container(
-                child: Text("완료", style: TextStyle(fontWeight: FontWeight.bold, fontSize:  20)),
-                margin: EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 20,
-                ),
-              );
-            } else if (idx == 3) {
-              List<Todo> doneList = todos.where((t){
-                return t.done == 1;
-              }).toList();
-
-              return Container(
-                child: Column(
-                  children: List.generate(doneList.length, (_idx) {
-                    Todo t = doneList[_idx];
-
-                    return InkWell(child : TodoCardWidget(t:t),
-                      onTap: (){
-                        setState(() {
-                          if(t.done == 0) {
-                            t.done = 1;
-                          } else {
-                            t.done = 0;
-                          }
-                        });
-                      },
-                      onLongPress: () async {
-                        Todo todo = await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (ctx) => TodoWritePage(todo: t)
-                        ));
-                        setState(() {
-
-                        });
-                      },
-                    );
-                  }),
-                ),
-              );
-            }
-            return Container();
-          },
-          itemCount: 4,
-      ),
+      body: getPage(),
       bottomNavigationBar: BottomNavigationBar(
         items: [
           BottomNavigationBarItem(
@@ -205,8 +116,118 @@ class _MyHomePageState extends State<MyHomePage> {
               icon: Icon(Icons.more_horiz),
               label: "더보기"
           )
-        ]
+        ],
+        currentIndex: selectIndex,
+        onTap: (idx) {
+          if(idx == 1) {
+            getAllTodo();
+          }
+          setState(() {
+            selectIndex = idx;
+          });
+        },
       ),
+    );
+  }
+
+  Widget getPage() {
+    if(selectIndex == 0) {
+      return getMain();
+    } else {
+      return getHistory();
+    }
+  }
+
+  Widget getMain() {
+    return ListView.builder(
+      itemBuilder: (ctx, idx) {
+        if (idx == 0) {
+          return Container(
+            child: Text("오늘하루", style: TextStyle(fontWeight: FontWeight.bold, fontSize:  20)),
+            margin: EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 20,
+            ),
+          );
+        } else if (idx == 1) {
+          List<Todo> undoneList = todos.where((t){
+            return t.done == 0;
+          }).toList();
+
+          return Container(
+            child: Column(
+              children: List.generate(undoneList.length, (_idx) {
+                Todo t = undoneList[_idx];
+
+                return InkWell(child : TodoCardWidget(t:t),
+                  onTap: () async {
+                    setState(() {
+                      if(t.done == 0) {
+                        t.done = 1;
+                      } else {
+                        t.done = 0;
+                      }
+                    });
+                    await dbHelper.modifyTodo(t);
+                  },
+                  onLongPress: () async {
+                    getTodayTodo();
+                  },
+                );
+              }),
+            ),
+          );
+        } else if (idx == 2) {
+          return Container(
+            child: Text("완료", style: TextStyle(fontWeight: FontWeight.bold, fontSize:  20)),
+            margin: EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 20,
+            ),
+          );
+        } else if (idx == 3) {
+          List<Todo> doneList = todos.where((t){
+            return t.done == 1;
+          }).toList();
+
+          return Container(
+            child: Column(
+              children: List.generate(doneList.length, (_idx) {
+                Todo t = doneList[_idx];
+
+                return InkWell(child : TodoCardWidget(t:t),
+                  onTap: () async {
+                    setState(() {
+                      if(t.done == 0) {
+                        t.done = 1;
+                      } else {
+                        t.done = 0;
+                      }
+                    });
+                    await dbHelper.modifyTodo(t);
+                  },
+                  onLongPress: () async {
+                    getTodayTodo();
+                  },
+                );
+              }),
+            ),
+          );
+        }
+        return Container();
+      },
+      itemCount: 4,
+    );
+  }
+
+  List<Todo> allTodo = [];
+
+  Widget getHistory() {
+    return ListView.builder(
+      itemBuilder: (ctx, idx) {
+        return TodoCardWidget(t: allTodo[idx]);
+      },
+      itemCount: allTodo.length,
     );
   }
 }
@@ -218,6 +239,9 @@ class TodoCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
+    int now = Utils.getFormatTime(DateTime.now());
+    DateTime time = Utils.numToDateTime(t.date);
+
     return Container(
       decoration: BoxDecoration(
           color: Color(t.color),
@@ -242,7 +266,8 @@ class TodoCardWidget extends StatelessWidget {
             ],
           ),
           Container(height: 8),
-          Text(t.memo, style: TextStyle(color: Colors.white),)
+          Text(t.memo, style: TextStyle(color: Colors.white),),
+          now == t.date ? Container() : Text("${time.month}월 ${time.day}일", style: TextStyle(color: Colors.white),)
         ],
       ),
     );
